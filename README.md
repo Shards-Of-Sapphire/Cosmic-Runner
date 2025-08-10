@@ -1,4 +1,4 @@
-# **Cosmic Runner** 🚀🌌
+# **Cosmic Runner** 🏃‍➡️🌌
 
 **Cosmic Runner** is a thrilling **endless runner** game where you speed through the universe, navigating across **five unique biomes** in a seamless journey:  
 🌳 **Forest** → 🌊 **Sea** → ❄️ **Snow** → ☁️ **Sky** → 🌌 **Galaxy**  
