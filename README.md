@@ -75,9 +75,9 @@ cosmic-runner/
 
 ## **👨‍💻 Credits**
 Developed by **Calestia**  
-- Zayed (Lead Developer)  
-- Shoaib Khan  
-- Roushna Khatoon *(Baji)*  
+- Zayed (Structure Developer)  
+- Shoaib Khan  (Initial Code Developer)
+- Roushna Khatoon (Assets and Features Developer)  
 
 ---
 
