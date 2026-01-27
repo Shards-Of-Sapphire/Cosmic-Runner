@@ -314,9 +314,9 @@ class ObstacleSpawner:
     def __init__(self, game_instance):
         self.game = game_instance
         self.last_obstacle_x = 0
-        self.min_gap = 200  # Minimum gap between obstacles
-        self.max_gap = 400  # Maximum gap between obstacles
-        self.landing_spot_guarantee = 150  # Minimum safe landing distance
+        self.min_gap = 350  # Minimum gap between obstacles - INCREASED for better spacing
+        self.max_gap = 700  # Maximum gap between obstacles - INCREASED for better spacing
+        self.landing_spot_guarantee = 250  # Minimum safe landing distance
         self.difficulty_scaling = 1.0
         
     def should_spawn_obstacle(self):
@@ -456,9 +456,13 @@ class Player(pygame.sprite.Sprite):
             if self.sounds.get("jump"):
                 self.sounds["jump"].play()
             
-            # Track jump for missions
+            # Track jump for missions - FIXED: ensure this is counted
             if self.game:
                 self.game.jumps_this_frame += 1
+                # Debug: Also track total jumps in a separate counter
+                if not hasattr(self.game, 'total_jumps'):
+                    self.game.total_jumps = 0
+                self.game.total_jumps += 1
 
     def use_jetpack(self):
         if self.has_jetpack and self.jetpack_fuel > 0:
@@ -479,15 +483,9 @@ class Player(pygame.sprite.Sprite):
                 self.use_jetpack()
 
         # Gravity
-        if self.jumping or not self.on_ground:
+        if  not self.on_ground or self.jumping:
             self.velocity_y += self.gravity
-            next_y = self.rect.y + self.velocity_y
-            
-            # Limit maximum jump height
-            if self.initial_y - next_y > self.max_jump_height:
-                self.velocity_y = max(self.velocity_y, self.gravity)
-            
-            self.rect.y = next_y
+            self.rect.y += self.velocity_y
             
             # Check if landed
             if self.rect.y >= GROUND_LEVEL - self.rect.height:
@@ -495,6 +493,10 @@ class Player(pygame.sprite.Sprite):
                 self.jumping = False
                 self.velocity_y = 0
                 self.on_ground = True
+
+        else:
+            self.rect.y = GROUND_LEVEL - self.rect.height
+            self.velocity_y = 0
 
         # Skip collision during respawn invincibility
         if not (self.game and self.game.respawn_state):
@@ -553,6 +555,7 @@ class Player(pygame.sprite.Sprite):
 
 # Enhanced Obstacle class with more realistic appearances
 class Obstacle(pygame.sprite.Sprite):
+
     def __init__(self, biome, speed):
         super().__init__()
         self.biome = biome
@@ -1786,8 +1789,42 @@ class Game:
             self.tiles.append(tile)
             rightmost_tile += TILE_SIZE
 
+    def setup_biome(self):
+        """Setup new biome with initial elements and environment"""
+        # Create celestial body for the biome
+        self.celestial_body = CelestialBody(self.time_of_day, self.current_biome)
+        
+        # Spawn initial background elements for biome
+        for _ in range(3):
+            bg_element = BackgroundElement(self.current_biome, self.speed)
+            bg_element.rect.x = SCREEN_WIDTH + random.randint(0, 400)
+            self.background_elements.append(bg_element)
+        
+        # Refill ground tiles for new biome
+        for tile in list(self.tiles):
+            if tile.rect.x > SCREEN_WIDTH:
+                self.tiles.remove(tile)
+        
+        rightmost_tile = SCREEN_WIDTH
+        while rightmost_tile < SCREEN_WIDTH + 400:
+            tile = Tile(rightmost_tile, GROUND_LEVEL, "ground", self.current_biome)
+            self.tiles.append(tile)
+            if random.random() < 0.3:
+                deco_tile = Tile(rightmost_tile, GROUND_LEVEL - TILE_SIZE, "decoration", self.current_biome)
+                self.tiles.append(deco_tile)
+            rightmost_tile += TILE_SIZE
+        
+        # Initial checkpoint for new biome
+        checkpoint_distance = (self.current_biome + 1) * 600
+        if self.distance >= checkpoint_distance and self.current_biome not in self.biome_checkpoints:
+            checkpoint = Checkpoint(self.current_biome, self.speed, self)
+            self.checkpoints.append(checkpoint)
+
     def transition_biome(self):
-        """Enhanced biome transition - Space is final"""
+        """Enhanced biome transition - Space is final with smooth transition"""
+        # Pause spawning during transition for smooth experience
+        self.biome_transition_timer = 180  # 3 seconds pause for smooth transition
+        
         self.current_biome = (self.current_biome + 1) % 7
         
         # Day/night cycle every 2 biomes
@@ -1798,13 +1835,25 @@ class Game:
         
         self.next_biome_distance += 800
         self.has_checkpoint = False
+        
+        # Clear existing obstacles for smooth transition
+        self.obstacles.clear()
+        
         self.setup_biome()
-        self.screen_flash = 30
+        self.screen_flash = 80  # Enhanced flash for better visual feedback
+        self.camera_shake = 20
+        
+        # Play transition sound if available
+        if hasattr(self, 'sounds') and self.sounds and 'checkpoint' in self.sounds:
+            try:
+                self.sounds['checkpoint'].play()
+            except:
+                pass
         
         # Special message when reaching space
         if self.current_biome == SPACE:
-            self.screen_flash = 60
-            self.camera_shake = 20
+            self.screen_flash = 120  # Extended flash for final biome
+            self.camera_shake = 30
       
     def generate_ground_tiles(self):
         tile_x = 0
@@ -1914,6 +1963,13 @@ class Game:
         # Update distance and biome progression
         self.distance += self.speed * 0.1
         
+        # Update biome transition timer
+        if self.biome_transition_timer > 0:
+            self.biome_transition_timer -= 1
+            # Reduce speed during transition for smooth experience
+            current_speed_multiplier = 0.7 + (self.biome_transition_timer / 180 * 0.3)
+            display_speed = self.speed * current_speed_multiplier
+        
         # Check for biome transition
         if self.distance >= self.next_biome_distance:
             self.transition_biome()
@@ -1944,8 +2000,9 @@ class Game:
             pass  # Passive effect
         
         # Safe sound playing
-        if self.sounds and 'shield' in self.sounds and self.sounds['shield']:
-            self.sounds['shield'].play()
+        if hasattr(self, 'sounds') and self.sounds:
+            if 'shield' in self.sounds and self.sounds['shield']:
+                self.sounds['shield'].play()
 
     def deactivate_powerup(self, powerup_type):
         """Deactivate a power-up"""
@@ -1963,34 +2020,57 @@ class Game:
 
     def spawn_elements(self):
         """Spawn obstacles, coins, power-ups, etc."""
-        # Spawn obstacles - more realistic frequency
-        obstacle_chance = max(1, 100 - int(self.speed * 8))
-        if random.randint(1, obstacle_chance) == 1:
-            obstacle = Obstacle(self.current_biome, self.speed)
-            self.obstacles.append(obstacle)
-        
-        # Spawn coins - balanced frequency
-        if random.randint(1, 80) == 1:
-            coin = Coin(self.speed)
-            self.coins.append(coin)
-        
-        # Spawn power-ups - realistic rarity
-        if random.randint(1, 800) == 1:  # Less frequent but not too rare
-            powerup_types = ["shield", "speed", "coin_magnet", "double_coins"]
-            weights = [0.35, 0.25, 0.25, 0.15]  # Balanced probabilities
-            powerup_type = random.choices(powerup_types, weights=weights)[0]
+        # Don't spawn obstacles during biome transition for smooth gameplay
+        if len(self.obstacles) == 0:
+            # First obstacle - spawn far enough away
+            if random.randint(1, 60) == 1:
+                obstacle = Obstacle(self.current_biome, self.speed)
+                obstacle.rect.x = SCREEN_WIDTH + 200  # Start further away
+                self.obstacles.append(obstacle)
+        else:
+            # Check distance from last obstacle
+            rightmost_obstacle = max(self.obstacles, key=lambda o: o.rect.x)
+            distance_from_last = SCREEN_WIDTH - rightmost_obstacle.rect.x
             
-            # Place powerups in better positions
-            y_pos = random.randint(GROUND_LEVEL - 180, GROUND_LEVEL - 80)
-            powerup = PowerUp(SCREEN_WIDTH, y_pos, powerup_type, self.speed)
-            self.powerups.append(powerup)
+            # Guaranteed minimum gap based on player jump capability
+            min_gap = 250 + (self.speed * 10)  # Scales with speed
+            max_gap = 450 + (self.speed * 15)
+            
+            if distance_from_last >= min_gap:
+                # Only spawn with some probability to ensure gaps
+                spawn_chance = min(80, 40 + int(distance_from_last / 20))
+                if random.randint(1, spawn_chance) == 1:
+                    obstacle = Obstacle(self.current_biome, self.speed)
+                    obstacle.rect.x = SCREEN_WIDTH + random.randint(50, 150)
+                    self.obstacles.append(obstacle)
+            
+            # Spawn coins - balanced frequency
+            if random.randint(1, 80) == 1:
+                coin = Coin(self.speed)
+                self.coins.append(coin)
+            
+            # FIXED: Power-ups including jetpack with better spawn rate
+            if random.randint(1, 600) == 1:  # More frequent power-up spawns
+                powerup_types = ["shield", "speed", "coin_magnet", "double_coins", "jetpack"]
+                # Higher chance of jetpack in later biomes
+                if self.current_biome >= 4:
+                    weights = [0.2, 0.15, 0.2, 0.1, 0.35]
+                else:
+                    weights = [0.25, 0.20, 0.25, 0.15, 0.15]
+                powerup_type = random.choices(powerup_types, weights=weights)[0]
+                
+                y_pos = random.randint(GROUND_LEVEL - 200, GROUND_LEVEL - 80)
+                powerup = PowerUp(SCREEN_WIDTH, y_pos, powerup_type, self.speed)
+                self.powerups.append(powerup)
         
-        # Spawn checkpoints (one per biome, when player reaches certain distance)
-        checkpoint_distance = (self.current_biome + 1) * 600  # More frequent checkpoints
-        if (not self.has_checkpoint and self.distance >= checkpoint_distance and 
+        # FIXED: Checkpoint spawning
+        checkpoint_distance = (self.current_biome + 1) * 500
+        if (not self.has_checkpoint and 
+            self.distance >= checkpoint_distance and 
             self.current_biome not in self.biome_checkpoints):
             checkpoint = Checkpoint(self.current_biome, self.speed, self)
             self.checkpoints.append(checkpoint)
+            self.has_checkpoint = True  # Mark as spawned
         
         # Spawn background elements
         if random.randint(1, 150) == 1:
@@ -2005,13 +2085,12 @@ class Game:
                 rightmost_tile = tile.rect.right
         
         while rightmost_tile < SCREEN_WIDTH + 200:
-            # Ground tile
             tile = Tile(rightmost_tile, GROUND_LEVEL, "ground", self.current_biome)
             self.tiles.append(tile)
             
-            # Decorative tile chance
             if random.random() < 0.3:
-                deco_tile = Tile(rightmost_tile, GROUND_LEVEL - TILE_SIZE, "decoration", self.current_biome)
+                deco_tile = Tile(rightmost_tile, GROUND_LEVEL - TILE_SIZE, 
+                               "decoration", self.current_biome)
                 self.tiles.append(deco_tile)
             
             rightmost_tile += TILE_SIZE
@@ -2265,6 +2344,22 @@ class Game:
         
         # Enhanced mission display
         self.draw_missions(screen)
+        
+        # Show biome transition message
+        if self.biome_transition_timer > 0:
+            # Calculate fade in/out effect
+            alpha = min(255, (self.biome_transition_timer / 180) * 200)
+            
+            # Transition message
+            transition_text = font_huge.render(f"Welcome to {biome_names[self.current_biome].upper()}!", True, (255, 215, 0))
+            transition_rect = transition_text.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//3))
+            
+            # Render to temporary surface for alpha
+            transition_surface = pygame.Surface((SCREEN_WIDTH, 150), pygame.SRCALPHA)
+            temp_text = pygame.transform.smoothscale(transition_text, transition_text.get_size())
+            transition_surface.blit(temp_text, (transition_rect.x - 100, transition_rect.y - 50))
+            transition_surface.set_alpha(int(alpha))
+            screen.blit(transition_surface, (0, 0))
         
         # Mission completion notification
         if self.mission_completion_timer > 0:
