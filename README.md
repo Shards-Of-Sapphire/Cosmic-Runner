@@ -1,32 +1,44 @@
 # **Cosmic Runner** 🏃‍➡️🌌
+**v1.7**
 
-**Cosmic Runner** is a thrilling **endless runner** game where you speed through the universe, navigating across **five unique biomes** in a seamless journey:  
-🌳 **Forest** → 🌊 **Sea** → ❄️ **Snow** → ☁️ **Sky** → 🌌 **Galaxy**  
+**Cosmic Runner** is a thrilling **endless runner** game where you speed through the universe, navigating across **eight unique biomes** in a seamless journey:  
+🏔️ **Plateau** → 🌳 **Dark Forest** → 🏜️ **Desert** → 🌊 **Sea** → ❄️ **Snow** → 🌋 **Volcano** → ☁️ **Sky** → 🌌 **Space**  
 
 Test your reflexes, survive as long as possible, and rack up the highest score as the world around you evolves from lush greenery to the deep cosmos.
 
 ---
 
+## **📋 Version History**
+- **v1.7** — Latest stable release with enhanced graphics and improved performance
+- See [CHANGELOG.md](CHANGELOG.md) for detailed updates
+
+---
+
 ## **🌍 Biome Progression**
 ```
-[🌳 Forest] → [🌊 Sea] → [❄️ Snow] → [☁️ Sky] → [🌌 Galaxy]
+[�️ Plateau] → [🌳 Dark Forest] → [🏜️ Desert] → [🌊 Sea] → [❄️ Snow] → [🌋 Volcano] → [☁️ Sky] → [🌌 Space]
 ```
-**1. Forest** – A lush green world full of roots, vines, and falling logs.  
-**2. Sea** – Glide over sparkling waves, dodge coral spikes, and ride ocean currents.  
-**3. Snow** – Slippery ice plains, snowstorms, and frozen hazards.  
-**4. Sky** – Float among clouds while avoiding birds, storms, and airships.  
-**5. Galaxy** – The final frontier with asteroids, lasers, and black holes.  
+**1. Plateau** – Rocky, elevated terrain with stone formations and natural obstacles.  
+**2. Dark Forest** – A lush but shadowy world full of trees, vines, and mysterious hazards.  
+**3. Desert** – Vast sandy dunes with scorching heat and ancient ruins.  
+**4. Sea** – Glide over sparkling waves, dodge coral spikes, and ride ocean currents.  
+**5. Snow** – Slippery ice plains, snowstorms, and frozen hazards.  
+**6. Volcano** – Erupting magma chambers, lava flows, and volcanic projectiles.  
+**7. Sky** – Float among clouds while avoiding birds, storms, and airships.  
+**8. Space** – The final frontier with asteroids, lasers, and black holes.  
 
 ---
 
 ## **🎮 Features**
 - **Endless Gameplay** — Keep running until your skills (or luck) run out.  
-- **Biome Progression** — 5 unique stages with escalating difficulty.  
-- **Checkpoints** — Continue from your last unlocked biome.  
-- **Dynamic Obstacles** — Each biome has its own hazards.  
+- **Biome Progression** — 8 unique stages with escalating difficulty.  
+- **Checkpoints** — Continue from your last unlocked biome with lives system.  
+- **Dynamic Obstacles** — Each biome has its own unique hazards and physics.  
 - **Immersive Audio** — Unique background music and SFX for each biome.  
-- **Multiplayer Mode** — Race your friends locally.  
+- **Volume Control** — Adjustable volume slider and mute toggle.  
+- **Responsive Controls** — Arrow Keys/WASD with smooth player animation.  
 - **Score Tracking** — Beat your own high score or challenge others.  
+- **Fullscreen Support** — Toggle between windowed and fullscreen modes.  
 
 ---
 
@@ -76,7 +88,7 @@ cosmic-runner/
 ## **👨‍💻 Credits**
 Developed by **Calestia**  
 - Zayed (Structure Developer)  
-- Shoaib Khan  (Initial Code Developer)
+- Shoaib Khan (Initial Code Developer)
 - Roushna Khatoon (Assets and Features Developer)  
 
 ---
