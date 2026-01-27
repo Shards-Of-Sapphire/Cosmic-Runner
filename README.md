@@ -10,7 +10,7 @@ Test your reflexes, survive as long as possible, and rack up the highest score a
 
 ## **📋 Version History**
 - **v1.7** — Latest stable release with enhanced graphics and improved performance
-- See [CHANGELOG.md](CHANGELOG.md) for detailed updates
+
 
 ---
 
