@@ -1111,6 +1111,46 @@ class BackgroundElement(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.y = GROUND_LEVEL - height
 
+    def create_dark_forest_background(self):
+        width, height = random.randint(80, 150), random.randint(200, 350)
+        self.image = pygame.Surface((width, height), pygame.SRCALPHA)
+        for i in range(3):
+            tree_x = i * width // 3
+            tree_width = width // 4
+            pygame.draw.rect(self.image, (20, 20, 20), (tree_x, height//2, tree_width, height//2))
+            pygame.draw.ellipse(self.image, (10, 20, 10), (tree_x - tree_width, 0, tree_width*3, height//2))
+        self.rect = self.image.get_rect()
+        self.rect.y = GROUND_LEVEL - height
+
+    def create_desert_background(self):
+        choice = random.choice(['dunes', 'mountains'])
+        if choice == 'dunes':
+            width, height = random.randint(300, 500), random.randint(50, 120)
+            self.image = pygame.Surface((width, height), pygame.SRCALPHA)
+            for layer in range(3):
+                layer_height = height // (layer + 1)
+                points = [(0, height)]
+                for i in range(15):
+                    x = i * width // 14
+                    y = height - layer_height * (1 + 0.3 * math.sin(i * 0.8))
+                    points.append((x, int(y)))
+                points.append((width, height))
+                dune_color = (238 - layer*20, 203 - layer*15, 173 - layer*10)
+                pygame.draw.polygon(self.image, dune_color, points)
+        else:
+            width, height = random.randint(400, 600), random.randint(150, 300)
+            self.image = pygame.Surface((width, height), pygame.SRCALPHA)
+            points = [(0, height)]
+            for i in range(8):
+                x = i * width // 7
+                y = random.randint(0, height//3)
+                points.append((x, y))
+            points.append((width, height))
+            pygame.draw.polygon(self.image, (160, 82, 45), points)
+        
+        self.rect = self.image.get_rect()
+        self.rect.y = GROUND_LEVEL - height
+
     def create_sea_background(self):
         if random.choice([True, False]):
             width, height = 30, random.randint(200, 400)
@@ -1187,7 +1227,7 @@ class BackgroundElement(pygame.sprite.Sprite):
                             wx = x + col * 8 + 2
                             wy = height - building_height + row * 15 + 3
                             window_color = (255, 255, 0) if random.random() < 0.7 else (100, 200, 255)
-                            pygame.draw.rect(self.image, window_color, (wx, wy, 4, 6))
+                            pygame.draw.rect(screen, window_color, (wx, wy, 4, 6))
             self.rect = self.image.get_rect()
             self.rect.y = GROUND_LEVEL - height
 
@@ -2089,8 +2129,7 @@ class Game:
             self.tiles.append(tile)
             
             if random.random() < 0.3:
-                deco_tile = Tile(rightmost_tile, GROUND_LEVEL - TILE_SIZE, 
-                               "decoration", self.current_biome)
+                deco_tile = Tile(rightmost_tile, GROUND_LEVEL - TILE_SIZE, "decoration", self.current_biome)
                 self.tiles.append(deco_tile)
             
             rightmost_tile += TILE_SIZE
@@ -2731,12 +2770,12 @@ def draw_game_over(screen, game):
         option_bg = pygame.Surface((450, 40))
         option_bg.fill((100, 50, 0))
         option_bg.set_alpha(120)
-        option_bg_rect = option_bg.get_rect(center=(SCREEN_WIDTH//2, y_offset))
-        screen.blit(option_bg, option_bg_rect)
+        option_rect = option_bg.get_rect(center=(SCREEN_WIDTH//2, y_offset))
+        screen.blit(option_bg, option_rect)
         
         option_text = font_medium.render(option, True, YELLOW)
-        option_rect = option_text.get_rect(center=(SCREEN_WIDTH//2, y_offset))
-        screen.blit(option_text, option_rect)
+        text_rect = option_text.get_rect(center=(SCREEN_WIDTH//2, y_offset))
+        screen.blit(option_text, text_rect)
         y_offset += 50
 
 def draw_instructions(screen):
@@ -2981,5 +3020,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    
