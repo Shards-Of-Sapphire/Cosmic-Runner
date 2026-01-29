@@ -2978,14 +2978,11 @@ def main():
                     elif game.state == PAUSED:
                         game.state = PLAYING
             
-            # Handle volume slider events
-            if game.state == MENU:
-                volume_slider.handle_event(event)
-                if not is_muted:  # Only update volume if not muted
-                    new_volume = volume_slider.get_volume()
-                    set_volume(new_volume)
-                    pygame.mixer.music.set_volume(new_volume)
-
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left mouse click
+                    if game.state == PLAYING:
+                        game.jump_input()
+        
         # Update game logic
         if game.state == PLAYING:
             game.update()
