@@ -1865,13 +1865,10 @@ class Game:
         # Pause spawning during transition for smooth experience
         self.biome_transition_timer = 180  # 3 seconds pause for smooth transition
         
-        self.current_biome = (self.current_biome + 1) % 7
+        self.current_biome = (self.current_biome + 1) % 8  # Changed to % 8 to include Space biome
         
-        # Day/night cycle every 2 biomes
-        if self.current_biome % 2 == 0:
-            self.time_of_day = DAY
-        else:
-            self.time_of_day = NIGHT
+        # Toggle day/night cycle for each biome transition
+        self.time_of_day = NIGHT if self.time_of_day == DAY else DAY
         
         self.next_biome_distance += 800
         self.has_checkpoint = False
