@@ -177,6 +177,16 @@ try:
 except pygame.error:
     runner_frames = create_runner_sprite()
 
+# Precomputed coin sprite for memory optimization
+def create_coin_sprite():
+    """Create reusable coin sprite"""
+    coin = pygame.Surface((15, 15), pygame.SRCALPHA)
+    pygame.draw.circle(coin, YELLOW, (7, 7), 7)
+    pygame.draw.circle(coin, (255, 215, 0), (7, 7), 5)  # Inner gold
+    return coin
+
+precomputed_coin_sprite = create_coin_sprite()
+
 # Load and set window icon with error handling
 try:
     logo_image_path = os.path.join(image_path, "sapphire-logo.png")
@@ -192,9 +202,9 @@ last_checkpoint_x = 150  # Default respawn X
 last_checkpoint_biome = 0
 biomes_with_checkpoint = set()
 
-# Window controls function
+# Window controls function with resolution optimization
 def toggle_fullscreen():
-    global screen, is_fullscreen, windowed_size, SCREEN_WIDTH, SCREEN_HEIGHT, GROUND_LEVEL
+    global screen, is_fullscreen, windowed_size, SCREEN_WIDTH, SCREEN_HEIGHT, GROUND_LEVEL, volume_slider
     
     if is_fullscreen:
         # Return to windowed mode
@@ -203,10 +213,12 @@ def toggle_fullscreen():
         is_fullscreen = False
     else:
         # Save current window size before going fullscreen
-        windowed_size = (SCREEN_WIDTH, SCREEN_HEIGHT) # Save current size
-        # Switch to fullscreen
-        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-        SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
+        windowed_size = (SCREEN_WIDTH, SCREEN_HEIGHT)
+        # Switch to fullscreen with native resolution
+        info = pygame.display.Info()
+        SCREEN_WIDTH = info.current_w
+        SCREEN_HEIGHT = info.current_h
+        screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
         is_fullscreen = True
     
     # Update ground level proportionally
@@ -215,6 +227,11 @@ def toggle_fullscreen():
     else: # Fallback
         current_ground_margin = REF_GROUND_MARGIN 
     GROUND_LEVEL = SCREEN_HEIGHT - current_ground_margin
+    
+    # Update volume slider position for new resolution
+    volume_slider.rect.x = 50
+    volume_slider.rect.y = SCREEN_HEIGHT - 150
+    volume_slider.handle_rect.x = volume_slider.rect.x + volume_slider.width * volume_slider.volume - 10
 
 def handle_window_resize(new_size):
     global SCREEN_WIDTH, SCREEN_HEIGHT, GROUND_LEVEL, windowed_size
@@ -308,6 +325,26 @@ def load_sounds():
             sounds[sound_name] = None
     
     return sounds
+
+# Cache for texture generation to reduce memory allocation
+class TextureCache:
+    """Simple texture cache to avoid recreating surfaces repeatedly"""
+    def __init__(self, max_size=50):
+        self.cache = {}
+        self.max_size = max_size
+        self.access_count = 0
+    
+    def get(self, key):
+        return self.cache.get(key)
+    
+    def set(self, key, value):
+        if len(self.cache) >= self.max_size and key not in self.cache:
+            # Remove oldest entry when cache is full
+            oldest_key = next(iter(self.cache))
+            del self.cache[oldest_key]
+        self.cache[key] = value
+
+scene_texture_cache = TextureCache(100)
 
 # Enhanced Obstacle Spacing Algorithm
 class ObstacleSpawner:
@@ -899,9 +936,8 @@ class Obstacle(pygame.sprite.Sprite):
 class Coin(pygame.sprite.Sprite):
     def __init__(self, speed):
         super().__init__()
-        self.image = pygame.Surface((15, 15), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, YELLOW, (7, 7), 7)
-        pygame.draw.circle(self.image, (255, 215, 0), (7, 7), 5)  # Inner gold
+        # Reuse precomputed coin sprite instead of creating new surface
+        self.image = precomputed_coin_sprite.copy()
         self.rect = self.image.get_rect()
         self.rect.x = SCREEN_WIDTH
         self.rect.y = random.randint(GROUND_LEVEL - 150, GROUND_LEVEL - 30)
@@ -1500,6 +1536,77 @@ class Mission:
             return f"{int(self.time_survived)}/{self.target_amount} seconds perfect"
         return ""
 
+# Decoration class - visual elements that don't cause collisions
+class Decoration(pygame.sprite.Sprite):
+    """Non-hazardous decorative elements that don't cause player death"""
+    def __init__(self, x, y, decoration_type, biome):
+        super().__init__()
+        self.image = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.type = decoration_type
+        self.biome = biome
+        self.speed = 0
+        self.is_decoration = True  # Flag to distinguish from obstacles
+        self.set_appearance()
+    
+    def set_appearance(self):
+        """Create decorative visual for this biome"""
+        if self.biome == PLATEAU:
+            # Small rocks and crystals
+            rock_color = random.choice([(160, 140, 120), (180, 160, 140), (200, 180, 160)])
+            size = random.randint(8, 20)
+            pygame.draw.ellipse(self.image, rock_color, (TILE_SIZE//2-size//2, TILE_SIZE-size, size, size))
+            
+        elif self.biome == DARK_FOREST:
+            # Small mushrooms and twigs
+            if random.choice([True, False]):
+                pygame.draw.circle(self.image, (139, 69, 19), (TILE_SIZE//2, TILE_SIZE-5), 2)
+                pygame.draw.ellipse(self.image, (100, 0, 100), (TILE_SIZE//2-6, TILE_SIZE-15, 12, 8))
+            else:
+                pygame.draw.line(self.image, (101, 67, 33), (5, TILE_SIZE-2), (TILE_SIZE-5, TILE_SIZE-8), 2)
+        
+        elif self.biome == DESERT:
+            # Desert plants
+            pygame.draw.line(self.image, (34, 139, 34), (TILE_SIZE//2, TILE_SIZE), (TILE_SIZE//2, TILE_SIZE-15), 2)
+            pygame.draw.circle(self.image, (34, 139, 34), (TILE_SIZE//2-5, TILE_SIZE-12), 3)
+            pygame.draw.circle(self.image, (34, 139, 34), (TILE_SIZE//2+5, TILE_SIZE-12), 3)
+        
+        elif self.biome == SEA:
+            # Seaweed
+            for i in range(3):
+                y_pos = TILE_SIZE - i * 6
+                width = max(2, 8 - i)
+                pygame.draw.rect(self.image, (46, 125, 50), (TILE_SIZE//2-width//2, y_pos-6, width, 6))
+        
+        elif self.biome == SNOW:
+            # Snow formations
+            pygame.draw.circle(self.image, (240, 248, 255), (TILE_SIZE//2, TILE_SIZE-10), random.randint(3, 7))
+        
+        elif self.biome == VOLCANO:
+            # Volcanic rocks
+            pygame.draw.circle(self.image, (139, 69, 19), (TILE_SIZE//2, TILE_SIZE-8), random.randint(4, 8))
+        
+        elif self.biome == SKY:
+            # Floating particles
+            pygame.draw.circle(self.image, (255, 255, 255), (TILE_SIZE//2, TILE_SIZE//2), random.randint(2, 4))
+        
+        else:  # SPACE
+            # Decorative space crystals
+            crystal_color = random.choice([(150, 100, 255), (100, 255, 150), (255, 100, 150)])
+            pygame.draw.polygon(self.image, crystal_color, [(TILE_SIZE//2, TILE_SIZE//4), 
+                                                             (TILE_SIZE//4, 3*TILE_SIZE//4), 
+                                                             (3*TILE_SIZE//4, 3*TILE_SIZE//4)])
+    
+    def update(self, speed):
+        """Move decoration with game speed"""
+        self.rect.x -= speed
+    
+    def is_off_screen(self):
+        """Check if decoration has left the screen"""
+        return self.rect.x + self.rect.width < 0
+
 # Fixed Tile class - removes black boxes
 class Tile(pygame.sprite.Sprite):
     def __init__(self, x, y, tile_type, biome):
@@ -1511,6 +1618,7 @@ class Tile(pygame.sprite.Sprite):
         self.type = tile_type
         self.biome = biome
         self.speed = 0
+        self.is_decoration = False  # Not a decoration, this is ground
         self.set_appearance()
     
     def set_appearance(self):
@@ -1627,25 +1735,6 @@ class Tile(pygame.sprite.Sprite):
                 # Add metallic border
                 pygame.draw.rect(self.image, (80, 80, 120), (0, 0, TILE_SIZE, TILE_SIZE), 1)
 
-        elif self.type == "decoration":
-            # Decorative tiles above ground
-            if self.biome == PLATEAU:
-                # Small rocks and crystals
-                self.image.fill((0, 0, 0, 0))  # Fully transparent background
-                rock_color = random.choice([(160, 140, 120), (180, 160, 140), (200, 180, 160)])
-                size = random.randint(8, 20)
-                pygame.draw.ellipse(self.image, rock_color, (TILE_SIZE//2-size//2, TILE_SIZE-size, size, size))
-                
-            elif self.biome == DARK_FOREST:
-                # Small mushrooms and twigs
-                self.image.fill((0, 0, 0, 0))
-                if random.choice([True, False]):
-                    # Mushroom
-                    pygame.draw.circle(self.image, (139, 69, 19), (TILE_SIZE//2, TILE_SIZE-5), 2)  # stem
-                    pygame.draw.ellipse(self.image, (100, 0, 100), (TILE_SIZE//2-6, TILE_SIZE-15, 12, 8))  # cap
-                else:
-                    # Twig
-                    pygame.draw.line(self.image, (101, 67, 33), (5, TILE_SIZE-2), (TILE_SIZE-5, TILE_SIZE-8), 2)
 
     def update(self, speed):
         self.rect.x -= speed
@@ -1742,6 +1831,7 @@ class Game:
         self.powerups = []
         self.celestial_body = None
         self.checkpoints = []
+        self.decorations = []  # Separate list for decorative elements
         
         # Player
         self.player = Player()
@@ -1827,6 +1917,10 @@ class Game:
         while rightmost_tile < SCREEN_WIDTH + 200:
             tile = Tile(rightmost_tile, GROUND_LEVEL, "ground", self.current_biome)
             self.tiles.append(tile)
+            # Randomly spawn decorations on top of tiles
+            if random.randint(1, 100) <= 20:  # 20% chance for decoration
+                decoration = Decoration(rightmost_tile, GROUND_LEVEL - TILE_SIZE, "decoration", self.current_biome)
+                self.decorations.append(decoration)
             rightmost_tile += TILE_SIZE
 
     def setup_biome(self):
@@ -1845,13 +1939,17 @@ class Game:
             if tile.rect.x > SCREEN_WIDTH:
                 self.tiles.remove(tile)
         
+        # Clear old decorations
+        self.decorations = [d for d in self.decorations if d.rect.x <= SCREEN_WIDTH]
+        
         rightmost_tile = SCREEN_WIDTH
         while rightmost_tile < SCREEN_WIDTH + 400:
             tile = Tile(rightmost_tile, GROUND_LEVEL, "ground", self.current_biome)
             self.tiles.append(tile)
+            # Add decorative elements instead of decoration tiles
             if random.random() < 0.3:
-                deco_tile = Tile(rightmost_tile, GROUND_LEVEL - TILE_SIZE, "decoration", self.current_biome)
-                self.tiles.append(deco_tile)
+                deco = Decoration(rightmost_tile, GROUND_LEVEL - TILE_SIZE, "decoration", self.current_biome)
+                self.decorations.append(deco)
             rightmost_tile += TILE_SIZE
         
         # Initial checkpoint for new biome
@@ -1985,6 +2083,12 @@ class Game:
             if tile.update(self.speed):
                 self.tiles.remove(tile)
         
+        # Update decorations (no collision checking - they're purely visual)
+        for decoration in list(self.decorations):
+            decoration.update(self.speed)
+            if decoration.is_off_screen():
+                self.decorations.remove(decoration)
+        
         # Update celestial body
         if self.celestial_body:
             self.celestial_body.update()
@@ -2056,7 +2160,7 @@ class Game:
             self.player.jetpack_fuel = 0
 
     def spawn_elements(self):
-        """Spawn obstacles, coins, power-ups, etc."""
+        """Spawn obstacles, coins, power-ups, etc. - Optimized with reduced random calls"""
         # Don't spawn obstacles during biome transition for smooth gameplay
         if len(self.obstacles) == 0:
             # First obstacle - spawn far enough away
@@ -2086,7 +2190,7 @@ class Game:
                 coin = Coin(self.speed)
                 self.coins.append(coin)
             
-            # FIXED: Power-ups including jetpack with better spawn rate
+            # Power-ups including jetpack with better spawn rate
             if random.randint(1, 600) == 1:  # More frequent power-up spawns
                 powerup_types = ["shield", "speed", "coin_magnet", "double_coins", "jetpack"]
                 # Higher chance of jetpack in later biomes
@@ -2100,7 +2204,7 @@ class Game:
                 powerup = PowerUp(SCREEN_WIDTH, y_pos, powerup_type, self.speed)
                 self.powerups.append(powerup)
         
-        # FIXED: Checkpoint spawning
+        # Checkpoint spawning
         checkpoint_distance = (self.current_biome + 1) * 500
         if (not self.has_checkpoint and 
             self.distance >= checkpoint_distance and 
@@ -2109,27 +2213,30 @@ class Game:
             self.checkpoints.append(checkpoint)
             self.has_checkpoint = True  # Mark as spawned
         
-        # Spawn background elements
+        # Spawn background elements - reduced spawn check frequency
         if random.randint(1, 150) == 1:
             bg_element = BackgroundElement(self.current_biome, self.speed)
             bg_element.rect.x = SCREEN_WIDTH + random.randint(0, 200)
             self.background_elements.append(bg_element)
         
-        # Spawn ground tiles to fill gaps
+        # Spawn ground tiles to fill gaps - optimized
         rightmost_tile = 0
         for tile in self.tiles:
             if tile.rect.right > rightmost_tile:
                 rightmost_tile = tile.rect.right
         
-        while rightmost_tile < SCREEN_WIDTH + 200:
-            tile = Tile(rightmost_tile, GROUND_LEVEL, "ground", self.current_biome)
-            self.tiles.append(tile)
-            
-            if random.random() < 0.3:
-                deco_tile = Tile(rightmost_tile, GROUND_LEVEL - TILE_SIZE, "decoration", self.current_biome)
-                self.tiles.append(deco_tile)
-            
-            rightmost_tile += TILE_SIZE
+        # Only spawn tiles if there's a gap
+        if rightmost_tile < SCREEN_WIDTH + 200:
+            while rightmost_tile < SCREEN_WIDTH + 200:
+                tile = Tile(rightmost_tile, GROUND_LEVEL, "ground", self.current_biome)
+                self.tiles.append(tile)
+                
+                # Spawn decorative elements separately (20% chance)
+                if random.random() < 0.2:
+                    deco = Decoration(rightmost_tile, GROUND_LEVEL - TILE_SIZE, "decoration", self.current_biome)
+                    self.decorations.append(deco)
+                
+                rightmost_tile += TILE_SIZE
     
     def update_missions(self):
         """Update mission progress"""
@@ -2183,6 +2290,7 @@ class Game:
         self.tiles.clear()
         self.powerups.clear()
         self.checkpoints.clear()
+        self.decorations.clear()
         
         # Reset player
         self.player = Player()
@@ -2258,6 +2366,10 @@ class Game:
         # Draw tiles
         for tile in self.tiles:
             screen.blit(tile.image, (tile.rect.x + shake_x, tile.rect.y + shake_y))
+        
+        # Draw decorations (visual-only, no collision)
+        for decoration in self.decorations:
+            screen.blit(decoration.image, (decoration.rect.x + shake_x, decoration.rect.y + shake_y))
         
         # Draw coins
         for coin in self.coins:
