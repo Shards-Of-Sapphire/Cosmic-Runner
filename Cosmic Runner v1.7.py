@@ -2992,6 +2992,9 @@ def draw_instructions(screen):
         screen.blit(rendered_text, (SCREEN_WIDTH//2 + 25, y))
         
         y += 30 if is_header else 22
+    
+    # Draw volume slider
+    volume_slider.draw(screen, font_medium)
 
 def draw_pause_screen(screen):
     """Enhanced pause screen"""
@@ -3036,6 +3039,9 @@ def draw_pause_screen(screen):
         text_rect = option_text.get_rect(center=(SCREEN_WIDTH//2, y_offset))
         screen.blit(option_text, text_rect)
         y_offset += 60
+    
+    # Draw volume slider
+    volume_slider.draw(screen, font_medium)
 
 def main():
     """Main game loop"""
@@ -3048,6 +3054,9 @@ def main():
     while running:
         # Handle events
         for event in pygame.event.get():
+            # Always handle volume slider events
+            volume_slider.handle_event(event)
+            
             if event.type == pygame.QUIT:
                 running = False
             
