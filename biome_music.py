@@ -8,19 +8,25 @@ pygame.mixer.init()
 current_dir = os.path.dirname(__file__)
 
 # Biome constants (matching main game)
-FOREST = 0
-SEA = 1
-SNOW = 2
-SKY = 3
-SPACE = 4
+PLATEAU = 0
+DARK_FOREST = 1
+DESERT = 2
+SEA = 3
+SNOW = 4
+VOLCANO = 5
+SKY = 6
+SPACE = 7
 
-# Biome music files
+# Biome music files - one unique track per biome
 BIOME_MUSIC = {
-    FOREST: os.path.join(current_dir, "assets", "music", "On.mp3"),
-    SEA: os.path.join(current_dir, "assets", "music", "All Over.mp3"),
-    SNOW: os.path.join(current_dir, "assets", "music", "Dusted.mp3"),
-    SKY: os.path.join(current_dir, "assets", "music", "Glory.mp3"),
-    SPACE: os.path.join(current_dir, "assets", "music", "Galaxial.mp3")
+    PLATEAU: os.path.join(current_dir, "assets", "music", "On.mp3"),           # Rocky terrain
+    DARK_FOREST: os.path.join(current_dir, "assets", "music", "Chills.mp3"),   # Dark and mysterious
+    DESERT: os.path.join(current_dir, "assets", "music", "All Over.mp3"),      # Sandy adventure
+    SEA: os.path.join(current_dir, "assets", "music", "Dusted.mp3"),           # Ocean waves
+    SNOW: os.path.join(current_dir, "assets", "music", "Glory.mp3"),           # Icy peaks
+    VOLCANO: os.path.join(current_dir, "assets", "music", "Chills.mp3"),       # Volcanic heat
+    SKY: os.path.join(current_dir, "assets", "music", "On.mp3"),               # Sky adventure
+    SPACE: os.path.join(current_dir, "assets", "music", "Galaxial.mp3")        # Cosmic finale
 }
 
 # Track current biome and volume

@@ -1974,6 +1974,9 @@ class Game:
         # Clear existing obstacles for smooth transition
         self.obstacles.clear()
         
+        # CHANGE MUSIC FOR NEW BIOME with smooth fade
+        play_biome_music(self.current_biome, fade_duration_ms=1500)
+        
         self.setup_biome()
         self.screen_flash = 80  # Enhanced flash for better visual feedback
         self.camera_shake = 20
@@ -2300,6 +2303,9 @@ class Game:
 
         # Reset obstacle spawner
         self.obstacle_spawner = ObstacleSpawner(self)
+        
+        # START BIOME MUSIC for Plateau
+        play_biome_music(self.current_biome, fade_duration_ms=1000)
         
         # Reset mission system
         self.missions.clear()
