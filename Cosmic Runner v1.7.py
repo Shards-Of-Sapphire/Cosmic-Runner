@@ -2015,7 +2015,6 @@ class Game:
         self.obstacles_avoided_this_frame = 0
         self.player_hit_this_frame = False
         self.coins_collected_this_frame = 0
-        self.jumps_this_frame = 0
         
         # Handle respawn invincibility
         if self.respawn_state:
@@ -2120,6 +2119,9 @@ class Game:
         
         # Update missions
         self.update_missions()
+        
+        # Reset jump counter after mission update
+        self.jumps_this_frame = 0
         
         # Update frame counter
         self.frame_count += 1
